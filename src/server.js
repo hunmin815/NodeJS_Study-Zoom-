@@ -11,7 +11,7 @@ app.use("/public", express.static(__dirname + "/public")); // app.use = 모든 �
 app.get("/", (req, res) => res.render("home")); // only get 요청만 받음
 app.get("/*", (req, res) => res.redirect("/")); // 이외 URL 요청은 /로 redirect
 
-console.log("Hi");
+// console.log("Hi");
 
 // app.listen(3333); // listen Port
 
@@ -29,13 +29,30 @@ function onSocketMessage_rec(message) {
   console.log(message.toString("utf-8"));
 }
 
+const sockets = [];
+
 wss.on("connection", (socket) => {
+  sockets.push(socket);
+  socket["nickname"] = "Anony"; // socket내 정보 저장 가능
   console.log("Connected to Browser ✔");
   socket.on("close", onSocketClose);
-  // Browser Message 받기
-  socket.on("message", onSocketMessage_rec);
-  //
-  socket.send("hello~!"); // Socket 메세지 보내기 (Back -> Front)
+  socket.on("message", (msg) => {
+    const psMessage = JSON.parse(msg); // String to Object
+    psMessage.toString("utf-8"); // uft-8 인코딩 변환
+    console.log(psMessage);
+
+    switch (psMessage.type) {
+      case "new_message":
+        sockets.forEach((aSocket) =>
+          aSocket.send(`${socket.nickname}: ${psMessage.payload}`)
+        );
+      // sockets.forEach((aSocket) => aSocket.send(psMessage.payload));
+      case "nickname":
+        socket["nickname"] = psMessage.payload;
+      // console.log(psMessage.payload.toString("utf-8"));
+    }
+  });
+  // socket.send("hello~!"); // Socket 메세지 보내기 (Back -> Front)
 });
 
 server.listen(3333);
