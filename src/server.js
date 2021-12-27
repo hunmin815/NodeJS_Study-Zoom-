@@ -1,6 +1,6 @@
 import express from "express"; // express 사용 선언
 import http from "http";
-import WebSocket from "ws";
+import SocketIO from "socket.io";
 
 const app = express(); // express 함수 호출
 
@@ -11,48 +11,20 @@ app.use("/public", express.static(__dirname + "/public")); // app.use = 모든 �
 app.get("/", (req, res) => res.render("home")); // only get 요청만 받음
 app.get("/*", (req, res) => res.redirect("/")); // 이외 URL 요청은 /로 redirect
 
-// console.log("Hi");
+const httpServer = http.createServer(app); // http 서버 생성
+const sockIO = SocketIO(httpServer);
 
-// app.listen(3333); // listen Port
-
-const server = http.createServer(app); // http 서버 생성
-
-const wss = new WebSocket.Server({ server }); // websocket과 http 둘다 사용하는 방법 (하나의 포트로 모두 처리)
-
-// Socket 종료 시
-function onSocketClose() {
-  console.log("DisConnected from Browser X");
-}
-
-// Socket 메세지 받기 (Front -> Back)
-function onSocketMessage_rec(message) {
-  console.log(message.toString("utf-8"));
-}
-
-const sockets = [];
-
-wss.on("connection", (socket) => {
-  sockets.push(socket);
-  socket["nickname"] = "Anony"; // socket내 정보 저장 가능
-  console.log("Connected to Browser ✔");
-  socket.on("close", onSocketClose);
-  socket.on("message", (msg) => {
-    const psMessage = JSON.parse(msg); // String to Object
-    psMessage.toString("utf-8"); // uft-8 인코딩 변환
-    console.log(psMessage);
-
-    switch (psMessage.type) {
-      case "new_message":
-        sockets.forEach((aSocket) =>
-          aSocket.send(`${socket.nickname}: ${psMessage.payload}`)
-        );
-      // sockets.forEach((aSocket) => aSocket.send(psMessage.payload));
-      case "nickname":
-        socket["nickname"] = psMessage.payload;
-      // console.log(psMessage.payload.toString("utf-8"));
-    }
+sockIO.on("connection", (socket) => {
+  socket.onAny((event) => {
+    console.log(`Socket Event:${event}`);
   });
-  // socket.send("hello~!"); // Socket 메세지 보내기 (Back -> Front)
+  socket.on("enter_room", (roomName, done) => {
+    console.log(socket.id);
+    console.log(socket.rooms);
+    socket.join(roomName);
+    console.log(socket.rooms);
+    done();
+  });
 });
 
-server.listen(3333);
+httpServer.listen(3333);
