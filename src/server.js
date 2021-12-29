@@ -12,19 +12,28 @@ app.get("/", (req, res) => res.render("home")); // only get 요청만 받음
 app.get("/*", (req, res) => res.redirect("/")); // 이외 URL 요청은 /로 redirect
 
 const httpServer = http.createServer(app); // http 서버 생성
-const sockIO = SocketIO(httpServer);
+const sockIO = SocketIO(httpServer, {
+  cors: { origin: "*", Credential: true },
+});
 
 sockIO.on("connection", (socket) => {
   socket.onAny((event) => {
-    console.log(`Socket Event:${event}`);
+    console.log(`== Socket Event:${event} ==`);
   });
-  socket.on("enter_room", (roomName, done) => {
-    console.log(socket.id);
-    console.log(socket.rooms);
+  socket.on("enter_room", (roomName) => {
+    console.log(`Socket ID = ` + socket.id);
     socket.join(roomName);
     console.log(socket.rooms);
-    done();
+    socket.emit("Hello", "Hello!");
+    // console.log(socket.rooms);
   });
+  // socket.on("enter_room", (roomName, done) => {
+  //   console.log(socket.id);
+  //   console.log(socket.rooms);
+  //   socket.join(roomName);
+  //   console.log(socket.rooms);
+  //   done();
+  // });
 });
 
 httpServer.listen(3333);
