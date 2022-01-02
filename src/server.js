@@ -1,3 +1,4 @@
+import { doesNotMatch } from "assert";
 import express from "express"; // express 사용 선언
 import http from "http";
 import SocketIO from "socket.io";
@@ -20,20 +21,30 @@ sockIO.on("connection", (socket) => {
   socket.onAny((event) => {
     console.log(`== Socket Event:${event} ==`);
   });
-  socket.on("enter_room", (roomName) => {
+
+  // 방 입장
+  socket.on("enter_room", (roomName, done) => {
     console.log(`Socket ID = ` + socket.id);
-    socket.join(roomName);
+    socket.join(roomName.payload);
     console.log(socket.rooms);
-    socket.emit("Hello", "Hello!");
-    // console.log(socket.rooms);
+    done(); // Front-end : run showRoom
+    socket.emit("Hello", "Hello! i'm Nodejs Server");
+    console.log(roomName.payload);
+    socket.to(roomName.payload).emit("welcome");
   });
-  // socket.on("enter_room", (roomName, done) => {
-  //   console.log(socket.id);
-  //   console.log(socket.rooms);
-  //   socket.join(roomName);
-  //   console.log(socket.rooms);
-  //   done();
-  // });
+
+  // socket 연결 종료 전 마지막 통신
+  socket.on("disconnecting", () => {
+    socket.rooms.forEach((room) => {
+      socket.to(room).emit("bye");
+    });
+  });
+
+  // 다른 유저에게 메세지 전달
+  socket.on("new_message", (msg, room, done) => {
+    socket.to(room).emit("Server_new_message", `Other : ${msg}`);
+    done(); // run Front-end -> You : ~
+  });
 });
 
 httpServer.listen(3333);
